@@ -4,16 +4,18 @@ import bcrypt from 'bcryptjs'
 // UPDATE USER
 export const updateUser = async (req, res) => {
   try {
-    const { password, isAdmin, userId } = req.body;
+    const { userId } = req.body;
+    const updateFields = { ...req.body }; // Copy all update fields
 
+    // Check if the user has permission to update
     if (userId === req.params.id || isAdmin) {
-      if (password) {
+      if (updateFields.password) {
         const salt = await bcrypt.genSalt(10);
-        const newpassword = await bcrypt.hash(password, salt);
-        req.body.password = newpassword;
+        const newpassword = await bcrypt.hash(updateFields.password, salt);
+        updateFields.password = newpassword;
       }
 
-      const user = await User.findByIdAndUpdate(req.params.id, { $set: req.body });
+      const user = await User.findByIdAndUpdate(req.params.id, { $set: updateFields });
       if (!user) return res.status(404).json("User not found");
 
       return res.status(200).json("Account has been updated");
@@ -51,62 +53,30 @@ export const getUser = async (req, res) => {
     res.status(500).json("cant get that User", err)
   }
 }
-// Helper function to follow or unfollow a user
-const toggleFollow = async (userId, id, follow) => {
-  try {
-    const user = await User.findById(id);
-    const currentUser = await User.findById(userId);
 
-    if (follow && !user.followers.includes(userId)) {
-      await user.updateOne({ $push: { followers: userId } });
-      await currentUser.updateOne({ $push: { followed: id } });
-      return { success: true, message: "User has been followed" };
-    } else if (!follow && user.followers.includes(userId)) {
-      await user.updateOne({ $pull: { followers: userId } });
-      await currentUser.updateOne({ $pull: { followed: id } });
-      return { success: true, message: "User has been unfollowed" };
-    } else {
-      return { success: false, message: follow ? "You already follow this user" : "You already unfollow this user" };
-    }
-  } catch (error) {
-    return { success: false, message: "An error occurred while processing the request" };
-  }
-};
-
-// FOLLOWED USERS
+// FOLLOW , UNFOLLOW 
 export const followedUser = async (req, res) => {
-  const { userId } = req.body;
-  const { id } = req.params;
+  try {
+    const user = await User.findById(req.params.id);
 
-  if (userId !== req.params.id) {
-    const result = await toggleFollow(userId, id, true);
-    if (result.success) {
-      res.status(200).json(result);
-    } else {
-      res.status(401).json(result);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-  } else {
-    res.status(403).json({ success: false, message: "You can't follow yourself" });
+
+    if (!user.followers.includes(req.body.userId)) {
+      // Follow the user
+      await user.updateOne({ $push: { followers: req.body.userId } });
+      res.status(200).json('Followed that user');
+    } else {
+      // Unfollow the user
+      await user.updateOne({ $pull: { followers: req.body.userId } });
+      res.status(200).json('Unfollowed that user');
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
-
-// UNFOLLOWED USERS
-export const unfollowedUser = async (req, res) => {
-  const { userId } = req.body;
-  const { id } = req.params;
-
-  if (userId !== req.params.id) {
-    const result = await toggleFollow(userId, id, false);
-    if (result.success) {
-      res.status(200).json(result);
-    } else {
-      res.status(401).json(result);
-    }
-  } else {
-    res.status(403).json({ success: false, message: "You can't unfollow yourself" });
-  }
-};
-
 
 
 // SAVE POST

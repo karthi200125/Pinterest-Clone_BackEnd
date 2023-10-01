@@ -51,37 +51,32 @@ export const deletePost = async (req, res) => {
         const post = await Post.findById(req.params.id);
         if (post.userId === req.body.userId) {
             await post.deleteOne()
-            res.status(200).json("post has been deleted")
-        }
-        else {
-            res.status(403).json("you can delete only your post")
+            res.status(200).json("post has been deleted");
+        } else {
+            res.status(403).json("you can delete only your post");
         }
     } catch (error) {
-        res.status(500).json("post delete failed", error)
+        res.status(500).json({ message: "post delete failed", error });
     }
 }
+
+
 // LIKE POST
 export const likePost = async (req, res) => {
     try {
-        const postId = req.params.id;
-        const userId = req.body.userId;
-
-        const post = await Post.findById(postId);
-
-        if (!post) {
-            return res.status(404).json("Post not found");
+        const post = await Post.findById(req.params.id);
+        if(!post.p_likes.includes(req.body.userId)){
+            await post.updateOne({$push:{p_likes:req.body.userId}})
+            res.status(200).json("image has been liked");        
         }
-
-        if (post.p_likes.includes(userId)) {            
-            return res.status(200).json("You have already liked this post");
-        }
-        
-        await post.updateOne({ $push: { p_likes: userId } });
-
-        res.status(200).json("The post has been liked");
-    } catch (error) {
-        res.status(500).json(error);
+        else{
+            await post.updateOne({$pull:{p_likes:req.body.userId}})
+            res.status(200).json("image has been disliked");        
+        }    
+    } catch (err) {
+        res.status(500).json(err)
     }
+    
 };
 
 // GET SINGLE POST
@@ -93,31 +88,34 @@ export const singlePost = async (req, res) => {
         res.status(500).json(error)
     }
 }
-// GET ALL POSTS
+// GET ALL POSTS 6516a09b08a3a258a4e88ca7
 export const allPosts = async (req, res) => {
     try {
-        const posts = await Post.find();        
-        res.status(200).json(posts)
+        const userId = "6516a09b08a3a258a4e88ca7"; 
+        const posts = await Post.find({ userId: { $ne: userId } });
+        res.status(200).json(posts);
     } catch (error) {
-        res.status(500).json(error)
+        res.status(500).json(error);
     }
 }
 
 // GET single user ALL POSTS
 export const singleUserPosts = async (req, res) => {
-    const { userId } = req.params; 
-
+    const { userId } = req.params; // Current user's ID
+  
     try {
-        const user = await User.findById(userId);
-
-        if (!user) {
-            return res.status(404).json("User not found");
-        }
-
-        const posts = await Post.find({ userId: user._id }); 
-
-        res.status(200).json(posts);
+      const user = await User.findById(userId);
+  
+      if (!user) {
+        return res.status(404).json("User not found");
+      }
+  
+      // Find all posts that do not belong to the current user
+      const posts = await Post.find({ userId: { $ne: user._id } });
+  
+      res.status(200).json(posts);
     } catch (error) {
-        res.status(500).json(error);
+      res.status(500).json(error);
     }
-};
+  };
+  
