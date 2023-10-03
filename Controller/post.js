@@ -50,14 +50,25 @@ export const updatePost = async (req, res) => {
 export const deletePost = async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
-        if (post.userId === req.body.userId) {
-            await post.deleteOne()
-            res.status(200).json("post has been deleted");
-        } else {
-            res.status(403).json("you can delete only your post");
+
+        if (!post) {
+            return res.status(404).json({ message: "Post not found" });
         }
+
+        // Check if the user deleting the post is the owner of the post
+        if (post.userId !== req.body.userId) {
+            return res.status(403).json("You can delete only your post");
+        }
+
+        // Delete the post
+        await post.deleteOne();
+
+        // Also, find and delete all posts that belong to the user
+        await Post.deleteMany({ userId: req.body.userId });
+
+        res.status(200).json({ message: "Post and user's posts have been deleted" });
     } catch (error) {
-        res.status(500).json({ message: "post delete failed", error });
+        res.status(500).json({ message: "Post delete failed", error });
     }
 }
 
@@ -91,9 +102,8 @@ export const singlePost = async (req, res) => {
 
 // GET ALL POSTS 
 export const allPosts = async (req, res) => {
-    try {
-        const userId = "6516a09b08a3a258a4e88ca7";
-        const posts = await Post.find({ userId: { $ne: userId } });
+    try {        
+        const posts = await Post.find();
         res.status(200).json(posts);
     } catch (error) {
         res.status(500).json(error);
@@ -146,4 +156,26 @@ export const CreateComment = async (req, res) => {
         res.status(500).json("Comment creation failed");
     }
 }
+
+// GET SAVED POSTS
+export const getSavedPosts = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const savedPostIds = user.savedposts.map(savedPost => savedPost.postId);        
+        if (savedPostIds.length > 0) {
+            const savedPosts = await Post.find({ _id: { $in: savedPostIds } });
+            return res.status(200).json(savedPosts);
+        } else {            
+            return res.status(200).json({ message: "No saved posts found" });
+        }
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching saved posts" });
+    }
+};
+
 
