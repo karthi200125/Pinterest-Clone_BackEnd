@@ -26,7 +26,15 @@ const postSchema = new mongoose.Schema({
   p_likes:{
     type:Array,
     default:[],
-  }
+  },
+  comments:[
+    {
+      userId:String,
+      profilePic:String,
+      username:String,
+      comment:String      
+    }
+  ]
   
 },{timestamps:true});
 

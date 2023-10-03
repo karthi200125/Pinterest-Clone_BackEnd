@@ -1,5 +1,5 @@
 import express from 'express'
-import {  allPosts, createPost, deletePost, likePost, singlePost, singleUserPosts, updatePost } from '../Controller/post.js';
+import {  CreateComment, allPosts, createPost, deletePost, likePost, singlePost, singleUserPosts, updatePost } from '../Controller/post.js';
 
 const route = express.Router();
 
@@ -9,7 +9,9 @@ route.post("/",createPost)
 route.put("/:id",updatePost)
 route.delete("/:id",deletePost)
 route.put("/:id/like",likePost)
-route.get("/:id",singlePost)
+route.get("/singlepost/:id",singlePost)
+route.post("/comment",CreateComment)
+
 
 
 

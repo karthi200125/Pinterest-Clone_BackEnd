@@ -6,8 +6,7 @@ export const updateUser = async (req, res) => {
   try {
     const { userId } = req.body;
     const updateFields = { ...req.body }; // Copy all update fields
-
-    // Check if the user has permission to update
+    
     if (userId === req.params.id || isAdmin) {
       if (updateFields.password) {
         const salt = await bcrypt.genSalt(10);
@@ -27,7 +26,6 @@ export const updateUser = async (req, res) => {
   }
 };
 
-
 // DELETE USER
 export const DeletUser = async (req, res) => {
   if (req.body.userId === req.params.id || req.body.isAdmin) {
@@ -42,15 +40,14 @@ export const DeletUser = async (req, res) => {
   }
 }
 
-
-// GET USER
+// GET SINGLE USER
 export const getUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     const { password, updatedAt, ...others } = user._doc;
     res.status(200).json(others)
   } catch (error) {
-    res.status(500).json("cant get that User", err)
+    res.status(500).json("cant get that User", error)
   }
 }
 
@@ -58,26 +55,25 @@ export const getUser = async (req, res) => {
 export const followedUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-
+    const currentUser = await User.findById(req.body.userId);
+    
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (!user.followers.includes(req.body.userId)) {
-      // Follow the user
-      await user.updateOne({ $push: { followers: req.body.userId } });
+    if (!user.followers.includes(req.body.userId)) {      
+      await user.updateOne({ $push: { followers: req.body.userId } }) && await currentUser.updateOne({ $push: { followed: req.params.id } });
       res.status(200).json('Followed that user');
-    } else {
-      // Unfollow the user
-      await user.updateOne({ $pull: { followers: req.body.userId } });
-      res.status(200).json('Unfollowed that user');
+      
+    } else {      
+      await user.updateOne({ $pull: { followers: req.body.userId } }) && await currentUser.updateOne({ $pull: { followed: req.params.id } });;
+      res.status(201).json('Unfollowed that user');
     }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 
 // SAVE POST
 export const savepost = async (req, res) => {
@@ -88,20 +84,13 @@ export const savepost = async (req, res) => {
 
     if (!user) {
       return res.status(404).json("User not found");
-    }
-
-    // Check if the post is already saved
+    }    
     const isAlreadySaved = user.savedposts.some((savedPost) => savedPost.postId.equals(postId));
-
     if (isAlreadySaved) {
       return res.status(400).json("Post is already saved by the user");
-    }
-
-    // Add the postId and postImage to the savedposts array
+    }  
     user.savedposts.push({ postId, postImage });
-
     const updatedUser = await user.save();
-
     return res.status(200).json({ message: `Post saved in user ${userId}`, user: updatedUser });
   } catch (error) {
     console.error(error);
@@ -118,20 +107,13 @@ export const unsavepost = async (req, res) => {
 
     if (!user) {
       return res.status(404).json("User not found");
-    }
-
-    // Find the index of the post to unsave
+    }    
     const postIndex = user.savedposts.findIndex((savedPost) => savedPost.postId.equals(postId));
-
     if (postIndex === -1) {
       return res.status(400).json("Post is not saved by the user");
-    }
-
-    // Remove the post from the savedposts array
+    }    
     user.savedposts.splice(postIndex, 1);
-
     const updatedUser = await user.save();
-
     return res.status(200).json({ message: `Post unsaved in user ${userId}`, user: updatedUser });
   } catch (error) {
     console.error(error);
