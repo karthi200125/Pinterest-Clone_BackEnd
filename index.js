@@ -29,17 +29,16 @@ app.use(cors(corsOptions));
 
 
 // STORAGE MULTER
-const uploadDir = path.join(__dirname, 'client', 'public', 'upload');
-
-// STORAGE MULTER
+const uploadDir = '../client/public/upload'; 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadDir); // Use the absolute path here
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + file.originalname);
   },
 });
+
 
 const upload = multer({ storage: storage });
 
