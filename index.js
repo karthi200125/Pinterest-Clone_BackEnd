@@ -1,21 +1,24 @@
-import express from 'express'
-import mongoose from 'mongoose'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import helmet from 'helmet'
-import morgan from 'morgan'
-import userRoute from './Routes/users.js'
+import express from 'express'
+import mongoose from 'mongoose'
+import multer from 'multer'
 import authRoute from './Routes/auth.js'
 import postRoute from './Routes/posts.js'
-import multer from 'multer'
+import userRoute from './Routes/users.js'
 dotenv.config();
 
 // Midleware
 const app = express()
 app.use(express.json())
-app.use(cors())
-app.use(helmet())
-app.use(morgan("common"))
+
+const corsOptions = {
+  origin: 'http://localhost:5173',
+  credentials: true, 
+};
+
+app.use(cors(corsOptions));
+
 
 
 // STORAGE MULTER
@@ -31,12 +34,14 @@ const storage = multer.diskStorage({
   const upload = multer({ storage: storage });
   
   app.post('/api/upload', upload.single("file"), (req, res) => {
-    const file = req.file;
-    res.status(200).json(file.filename);
+    try {
+      const file = req.file;
+      res.status(200).json(file.filename); 
+    } catch (error) {
+      res.status(500).json(error); 
+    }    
   });
   
-
-
 // Routes
 
 app.use("/api/users",userRoute)

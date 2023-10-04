@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs'
 export const updateUser = async (req, res) => {
   try {
     const { userId } = req.body;
-    const updateFields = { ...req.body }; // Copy all update fields
+    const updateFields = { ...req.body };
     
     if (userId === req.params.id || isAdmin) {
       if (updateFields.password) {
@@ -22,7 +22,7 @@ export const updateUser = async (req, res) => {
       return res.status(403).json("You can update only your account");
     }
   } catch (err) {
-    return res.status(500).json("User update failed");
+    res.status(500).json({ error: "User update failed", message: err.message });
   }
 };
 
