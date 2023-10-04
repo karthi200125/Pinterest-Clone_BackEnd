@@ -1,12 +1,19 @@
-import cors from 'cors'
-import dotenv from 'dotenv'
-import express from 'express'
-import mongoose from 'mongoose'
-import multer from 'multer'
-import authRoute from './Routes/auth.js'
-import postRoute from './Routes/posts.js'
-import userRoute from './Routes/users.js'
+import cors from 'cors';
+import dotenv from 'dotenv';
+import express from 'express';
+import mongoose from 'mongoose';
+import multer from 'multer';
+import authRoute from './Routes/auth.js';
+import postRoute from './Routes/posts.js';
+import userRoute from './Routes/users.js';
+import { fileURLToPath } from 'url'; // Import the fileURLToPath function
+import path from 'path';
+
 dotenv.config();
+
+// Get the current module's file path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Midleware
 const app = express()
@@ -22,26 +29,29 @@ app.use(cors(corsOptions));
 
 
 // STORAGE MULTER
+const uploadDir = path.join(__dirname, 'client', 'public', 'upload');
+
+// STORAGE MULTER
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, '../client/public/upload')
-    },
-    filename: function (req, file, cb) {
-      cb(null, Date.now() + file.originalname)
-    }
-  });
-  
-  const upload = multer({ storage: storage });
-  
-  app.post('/api/upload', upload.single("file"), (req, res) => {
-    try {
-      const file = req.file;
-      res.status(200).json(file.filename); 
-    } catch (error) {
-      res.status(500).json(error); 
-    }    
-  });
-  
+  destination: function (req, file, cb) {
+    cb(null, uploadDir); // Use the absolute path here
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + file.originalname);
+  },
+});
+
+const upload = multer({ storage: storage });
+
+app.post('/api/upload', upload.single("file"), (req, res) => {
+  try {
+    const file = req.file;
+    res.status(200).json(file.filename); 
+  } catch (error) {
+    res.status(500).json(error); 
+  }    
+});
+
 // Routes
 
 app.use("/api/users",userRoute)
