@@ -1,6 +1,5 @@
-import User from "../Model/User.js";
 import bcrypt from 'bcryptjs';
-import JWT from 'jsonwebtoken'
+import User from '../Model/User.js';
 
 // REGISTER
 export const Register = async (req, res) => {
@@ -8,7 +7,9 @@ export const Register = async (req, res) => {
 
     try {
         const existEmail = await User.findOne({ email });
-        if (existEmail) return res.status(400).json("Email Already Exists");
+        if (existEmail) {
+            return res.status(400).json('Email Already Exists');
+        }
 
         const salt = bcrypt.genSaltSync(10);
         const hashedPassword = bcrypt.hashSync(password, salt);
@@ -16,28 +17,43 @@ export const Register = async (req, res) => {
         const user = new User({ username, email, password: hashedPassword });
         await user.save();
 
-        res.status(201).json("User Created Successfully");
+        return res.status(201).json('User Created Successfully');
     } catch (error) {
-        console.error(error);
-        res.status(500).json("Register Failed");
+        console.error('Register Failed', error);
+        return res.status(500).json('Register Failed', error);
     }
 };
 
 // LOGIN
-
 export const Login = async (req, res) => {
-    const { email, password } = req.body;
-
+    const { email, password, username, profilePic } = req.body;
 
     try {
-        const user = await User.findOne({ email })
-        !user && res.status(500).json("wrong email address")
-        const checkpassword =await bcrypt.compare(password, user.password)
-        !checkpassword && res.status(500).json("wrong password")
-        
-        res.status(200).json(user)
-
+        if (username) {
+            // If its get username , it's Google OAuth registration
+            const existEmail = await User.findOne({ email });
+            if (existEmail) {
+                const user = await User.findOne({ email });
+                const checkpassword = await bcrypt.compare(password, user.password);
+                if (!checkpassword) return res.status(500).json('Wrong password');
+                return res.status(200).json(user);
+            }
+            // if email not exist that measn new user , so create one
+            const salt = bcrypt.genSaltSync(10);
+            const hashedPassword = bcrypt.hashSync(password, salt);
+            const user = new User({ username, email, password: hashedPassword, profilePic });
+            const userdatails = await user.save();
+            return res.status(201).json(userdatails);
+        } else {
+            // Regular login without a username
+            const user = await User.findOne({ email });
+            if (!user) return res.status(500).json('Wrong email address');
+            const checkpassword = await bcrypt.compare(password, user.password);
+            if (!checkpassword) return res.status(500).json('Wrong password');
+            return res.status(200).json(user);
+        }
     } catch (error) {
-        console.log("Login falied")
+        console.error('Login or Registration failed', error);
+        return res.status(500).json('Login or Registration Failed');
     }
-}
+};
